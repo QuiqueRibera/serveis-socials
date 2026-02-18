@@ -39,17 +39,19 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            border: 1px solid #00b1ea;
+            border: 1px solid #005f7f;
             background: rgba(255, 255, 255, 0.95);
         }
 
         .popup-header {
-            background-color: #00b1ea; /* Cyan fosc */
+            background-color: #00b1ea; 
             color: white;
             padding: 12px 15px;
             font-size: 1.1rem;
             font-weight: bold;
-            border-bottom: 2px solid #00b1ea;
+            border-bottom: 2px solid #008cb9;
+            /* Asegurar espacio para el botón de cerrar */
+            padding-right: 40px; 
         }
 
         .popup-body {
@@ -66,7 +68,7 @@
         }
 
         .popup-row strong {
-            color: #00bcd4;
+            color: #008cb9; 
             margin-right: 5px;
             min-width: 60px;
         }
@@ -74,7 +76,6 @@
         .popup-img-container {
             margin-top: 10px;
             width: 100%;
-            /* Eliminem alçada fixa per evitar espais buits excessius */
             min-height: 100px; 
             background-color: #f9f9f9;
             border-radius: 8px;
@@ -87,27 +88,30 @@
 
         .popup-img {
             width: 100%;
-            height: auto; /* Manté la proporció original */
-            max-height: 200px; /* Límit d'alçada perquè no ocupi tota la pantalla */
-            object-fit: contain; /* Assegura que es vegi tota la imatge sense retallar ni deformar */
+            height: auto;
+            max-height: 200px; 
+            object-fit: contain; 
             display: block;
         }
 
         /* Botó de tancar popup */
         .maplibregl-popup-close-button {
-            font-size: 24px;
+            font-size: 28px; /* Un poco más grande para dedos */
             color: white;
-            right: 5px;
-            top: 5px;
-            padding: 5px;
+            right: 8px;
+            top: 8px;
+            padding: 0;
             width: 30px;
             height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: transparent;
+            border: none;
+            z-index: 20;
         }
         .maplibregl-popup-close-button:hover {
-            background: rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.2);
             border-radius: 50%;
         }
 
@@ -118,7 +122,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #00b1ea;
+            border-top: 3px solid #00b1ea; 
             border-radius: 50%;
             width: 20px;
             height: 20px;
@@ -138,7 +142,7 @@
         // API KEY
         const apiKey = 'iDTQZVhITfzwL0fI4pCY';
 
-        // Dades actualitzades i traduïdes al valencià
+        // Dades
         const centrosData = {
             "type": "FeatureCollection",
             "features": [
@@ -178,7 +182,6 @@
                     },
                     "geometry": {
                         "type": "Point",
-                        // Coordenades invertides a [Longitud, Latitud] per a GeoJSON
                         "coordinates": [-0.4785047, 38.6997393]
                     }
                 }
@@ -187,7 +190,6 @@
 
         const backupImage = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80";
 
-        // Configuració de la vista inicial per poder tornar-hi
         const initialView = {
             center: [-0.473, 38.700],
             zoom: 13
@@ -204,16 +206,14 @@
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
         map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
-        // Variable global per rastrejar el popup actiu
         let currentPopup = null;
 
-        // Funció reutilitzable per tornar a la vista general
-        // Aquesta funció s'activarà quan es tanqui un popup
+        // Funció per tornar a la vista general
         const resetMap = () => {
             map.flyTo({
                 center: initialView.center,
                 zoom: initialView.zoom,
-                padding: {top: 0}, // Resetegem el padding per centrar bé el mapa
+                offset: [0, 0], // Aseguramos que el offset se resetee al volver
                 essential: true
             });
             currentPopup = null;
@@ -226,22 +226,21 @@
                 'data': centrosData
             });
 
-            // Capa de Cercles (Punts)
+            // Punts
             map.addLayer({
                 'id': 'centros-puntos',
                 'type': 'circle',
                 'source': 'centros-sociales',
                 'paint': {
                     'circle-radius': 10,
-                    // Color actualitzat a #e0f7fa
                     'circle-color': '#e0f7fa', 
                     'circle-stroke-width': 3,
-                    'circle-stroke-color': '#00bcd4', // Cyan
+                    'circle-stroke-color': '#00b1ea', 
                     'circle-opacity': 1
                 }
             });
 
-            // Capa d'efecte "Halo"
+            // Halo
             map.addLayer({
                 'id': 'centros-halo',
                 'type': 'circle',
@@ -249,7 +248,7 @@
                 'beforeId': 'centros-puntos',
                 'paint': {
                     'circle-radius': 20,
-                    'circle-color': '#00bcd4',
+                    'circle-color': '#00b1ea', 
                     'circle-opacity': 0.4,
                     'circle-blur': 0.5
                 }
@@ -263,32 +262,40 @@
                 map.getCanvas().style.cursor = '';
             });
 
+            // --- LÒGICA DE CLIC OPTIMITZADA (INSTANTÀNEA) ---
             map.on('click', 'centros-puntos', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const props = e.features[0].properties;
 
-                // Si ja hi ha un popup obert, el gestionem primer
+                // 1. Gestionar popup existent
                 if (currentPopup) {
-                    // Traiem el listener 'close' del popup anterior perquè no
-                    // intenti fer zoom out just quan volem fer zoom in al nou punt
-                    currentPopup.off('close', resetMap);
+                    currentPopup.off('close', resetMap); // Evitar doble reset
                     currentPopup.remove();
+                    currentPopup = null;
                 }
 
+                // Normalitzar coordenades
                 while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
                     coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
                 }
 
-                // --- CENTRAT INTEL·LIGENT (Zoom In) ---
+                // 2. CALCULAR OFFSET PER A "MARCADOR MÉS AVALL"
+                // Un offset positiu en Y mou el punt de destí cap AVALL respecte al centre de la pantalla.
+                // Usem 1/3 de l'alçada de la pantalla. Això deixa 2/3 lliures a dalt per al popup.
+                const offsetY = window.innerHeight / 3;
+
+                // 3. MOURE EL MAPA (ANIMACIÓ)
                 map.flyTo({
                     center: coordinates,
                     zoom: 16,
-                    speed: 1.2,
+                    speed: 1.5, // Més ràpid com en l'exemple que has passat
                     curve: 1,
-                    padding: {top: 250}, // Deixa espai a dalt per al popup
+                    offset: [0, offsetY], // Això baixa el marcador
                     essential: true
                 });
 
+                // 4. MOSTRAR POPUP INSTANTÀNIAMENT
+                // No esperem al 'moveend'. El creem ja.
                 const popupContent = `
                     <div class="popup-header">${props.Nombre}</div>
                     <div class="popup-body">
@@ -311,16 +318,22 @@
                     </div>
                 `;
 
-                const popup = new maplibregl.Popup({ offset: 25, closeButton: true, closeOnClick: true })
+                // Creem el popup forçant l'àncora a baix (anchor: 'bottom')
+                // Això garanteix que el popup surti cap AMUNT (above)
+                // i no es col·loqui sota el marcador.
+                const popup = new maplibregl.Popup({ 
+                    offset: 25, 
+                    closeButton: true, 
+                    closeOnClick: true,
+                    autoPan: false, // CLAU: Desactivem autoPan perquè ja movem nosaltres el mapa amb flyTo
+                    anchor: 'bottom' // CLAU: Forcem que surti cap amunt
+                })
                     .setLngLat(coordinates)
                     .setHTML(popupContent)
                     .addTo(map);
 
-                // --- ZOOM OUT EN TANCAR ---
-                // Quan aquest popup es tanqui (click a la X o al mapa), executem resetMap
+                // Reactivem el zoom out quan es tanqui aquest nou popup
                 popup.on('close', resetMap);
-
-                // Guardem referència al popup actual
                 currentPopup = popup;
             });
         });
