@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapa Serveis Socials Alcoi</title>
+    
+    <!-- Librería MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        
+        /* Contenedor del Mapa */
+        #map {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            z-index: 0;
+            background-color: #e0f7fa;
+        }
+
+        /* --- FILTRE BLAU TÈCNIC --- */
+        #map canvas {
+            filter: grayscale(100%) sepia(100%) hue-rotate(160deg) saturate(2.5) brightness(1.1) contrast(0.9);
+            transition: filter 0.5s ease;
+        }
+
+        /* Estils del Popup personalitzats per a mòbil */
+        .maplibregl-popup {
+            max-width: 85vw !important;
+            z-index: 10;
+        }
+
+        .maplibregl-popup-content {
+            padding: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid #00bcd4;
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .popup-header {
+            background-color: #00bcd4; /* Cyan fosc */
+            color: white;
+            padding: 12px 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-bottom: 2px solid #00bcd4;
+        }
+
+        .popup-body {
+            padding: 15px;
+            color: #333;
+        }
+
+        .popup-row {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .popup-row strong {
+            color: #00bcd4;
+            margin-right: 5px;
+            min-width: 60px;
+        }
+
+        .popup-img-container {
+            margin-top: 10px;
+            width: 100%;
+            /* Eliminem alçada fixa per evitar espais buits excessius */
+            min-height: 100px; 
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-img {
+            width: 100%;
+            height: auto; /* Manté la proporció original */
+            max-height: 200px; /* Límit d'alçada perquè no ocupi tota la pantalla */
+            object-fit: contain; /* Assegura que es vegi tota la imatge sense retallar ni deformar */
+            display: block;
+        }
+
+        /* Botó de tancar popup */
+        .maplibregl-popup-close-button {
+            font-size: 24px;
+            color: white;
+            right: 5px;
+            top: 5px;
+            padding: 5px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .maplibregl-popup-close-button:hover {
+            background: rgba(0,0,0,0.2);
+            border-radius: 50%;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #00bcd4;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script>
+        // API KEY
+        const apiKey = 'iDTQZVhITfzwL0fI4pCY';
+
+        // Dades actualitzades i traduïdes al valencià
+        const centrosData = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Nombre": "Centre d'Atenció 01",
+                        "Calle": "Carrer el Camí, 40, 03801 Alcoi, Alacant",
+                        "Barrios": "Centre, la Zona Alta, Viaducte, Batoi, Els Clots, carrer Oliver i part de Santa Rosa, Rambla Alta, Rambla Baixa, Font Roja, Regadiu, Estepar i Riquer Alt.",
+                        "Foto": "https://lh3.googleusercontent.com/gps-cs-s/AHVAweqAwzZMGwDK2VPzLP38Uf6LBug3_BSc2XXBWxoSZiaAKqWjZ_VrPnkS5Ri3JsmsMr7XNF_wLQGlU-VCFvu1YPJdo524e-TMUd_rhxVme9XsXlWml5sDbPZQ-Z9-yvYOwDGQ5Bl5=w408-h305-k-no"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-0.4757252, 38.6930737]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Nombre": "Centre d'Atenció 02",
+                        "Calle": "Av. Andalusia, 13, 03804 Alcoi, Alacant",
+                        "Barrios": "Zona Nord, part de l’Eixample que limita amb el carrer Anselm Aracil, Sol i Camp, Serelles i les Cases del Salt.",
+                        "Foto": "https://streetviewpixels-pa.googleapis.com/v1/thumbnail?panoid=iMrvR9nAe6q9cFYiumUxPQ&cb_client=search.gws-prod.gps&w=408&h=240&yaw=292.4843&pitch=0&thumbfov=100" 
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-0.4675641, 38.7058459]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "Nombre": "Centre d'Atenció 03",
+                        "Calle": "Carrer Isabel la Catòlica, 5, 03803 Alcoi, Alacant",
+                        "Barrios": "Santa Rosa, l’Eixample, Montesol, Baradello, el Sergent i Barxell.",
+                        "Foto": "https://streetviewpixels-pa.googleapis.com/v1/thumbnail?panoid=VsYpi_Z3Bk8zBNmudZG7fw&cb_client=search.gws-prod.gps&w=408&h=240&yaw=200.26553&pitch=0&thumbfov=100"
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        // Coordenades invertides a [Longitud, Latitud] per a GeoJSON
+                        "coordinates": [-0.4785047, 38.6997393]
+                    }
+                }
+            ]
+        };
+
+        const backupImage = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80";
+
+        // Configuració de la vista inicial per poder tornar-hi
+        const initialView = {
+            center: [-0.473, 38.700],
+            zoom: 13
+        };
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${apiKey}`,
+            center: initialView.center, 
+            zoom: initialView.zoom,
+            attributionControl: false
+        });
+
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
+        map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+        // Variable global per rastrejar el popup actiu
+        let currentPopup = null;
+
+        // Funció reutilitzable per tornar a la vista general
+        // Aquesta funció s'activarà quan es tanqui un popup
+        const resetMap = () => {
+            map.flyTo({
+                center: initialView.center,
+                zoom: initialView.zoom,
+                padding: {top: 0}, // Resetegem el padding per centrar bé el mapa
+                essential: true
+            });
+            currentPopup = null;
+        };
+
+        map.on('load', () => {
+            
+            map.addSource('centros-sociales', {
+                'type': 'geojson',
+                'data': centrosData
+            });
+
+            // Capa de Cercles (Punts)
+            map.addLayer({
+                'id': 'centros-puntos',
+                'type': 'circle',
+                'source': 'centros-sociales',
+                'paint': {
+                    'circle-radius': 10,
+                    // Color actualitzat a #e0f7fa
+                    'circle-color': '#e0f7fa', 
+                    'circle-stroke-width': 3,
+                    'circle-stroke-color': '#00bcd4', // Cyan
+                    'circle-opacity': 1
+                }
+            });
+
+            // Capa d'efecte "Halo"
+            map.addLayer({
+                'id': 'centros-halo',
+                'type': 'circle',
+                'source': 'centros-sociales',
+                'beforeId': 'centros-puntos',
+                'paint': {
+                    'circle-radius': 20,
+                    'circle-color': '#00bcd4',
+                    'circle-opacity': 0.4,
+                    'circle-blur': 0.5
+                }
+            });
+
+            map.on('mouseenter', 'centros-puntos', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'centros-puntos', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            map.on('click', 'centros-puntos', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const props = e.features[0].properties;
+
+                // Si ja hi ha un popup obert, el gestionem primer
+                if (currentPopup) {
+                    // Traiem el listener 'close' del popup anterior perquè no
+                    // intenti fer zoom out just quan volem fer zoom in al nou punt
+                    currentPopup.off('close', resetMap);
+                    currentPopup.remove();
+                }
+
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
+
+                // --- CENTRAT INTEL·LIGENT (Zoom In) ---
+                map.flyTo({
+                    center: coordinates,
+                    zoom: 16,
+                    speed: 1.2,
+                    curve: 1,
+                    padding: {top: 250}, // Deixa espai a dalt per al popup
+                    essential: true
+                });
+
+                const popupContent = `
+                    <div class="popup-header">${props.Nombre}</div>
+                    <div class="popup-body">
+                        <div class="popup-row">
+                            <strong>Carrer:</strong> 
+                            <span>${props.Calle}</span>
+                        </div>
+                        <div class="popup-row">
+                            <strong>Barris:</strong> 
+                            <span>${props.Barrios}</span>
+                        </div>
+                        <div class="popup-img-container">
+                            <div class="spinner"></div>
+                            <img src="${props.Foto}" 
+                                 class="popup-img" 
+                                 alt="Foto del centre" 
+                                 onload="this.previousElementSibling.style.display='none'"
+                                 onerror="this.src='${backupImage}'; this.previousElementSibling.style.display='none'">
+                        </div>
+                    </div>
+                `;
+
+                const popup = new maplibregl.Popup({ offset: 25, closeButton: true, closeOnClick: true })
+                    .setLngLat(coordinates)
+                    .setHTML(popupContent)
+                    .addTo(map);
+
+                // --- ZOOM OUT EN TANCAR ---
+                // Quan aquest popup es tanqui (click a la X o al mapa), executem resetMap
+                popup.on('close', resetMap);
+
+                // Guardem referència al popup actual
+                currentPopup = popup;
+            });
+        });
+    </script>
+</body>
+</html>
